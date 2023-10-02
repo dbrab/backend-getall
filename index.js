@@ -1,10 +1,22 @@
+const { MongoClient } = require('mongodb');
 const express = require('express');
 const { Builder, By } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const cors = require('cors');
+require('chromedriver');
 
 const app = express();
 app.use(cors());
+
+const mongoUri = 'mongodb+srv://publicspending:newpassword@gastopublico.sqatsh0.mongodb.net/';
+const client = new MongoClient(mongoUri);
+
+client.connect().then(() => {
+    console.log("=== MongoDB Connected ===");
+}).catch(err => {
+    console.error("=== MongoDB connection error ===", err);
+});
+
 
 app.get('/data', async (req, res) => {
     try {
@@ -45,31 +57,39 @@ app.get('/data', async (req, res) => {
 
         const gobiernoRegionalData = [];
         for (let i = 0; i < 26; i++) {
-          const regionalNameSelector = `#tr${i} td[align="left"]`;
-          const avancePercentageSelector = `#tr${i} td:last-child`;
-
-          const regionalNameElement = await driver.findElement(By.css(regionalNameSelector));
-          const avancePercentageElement = await driver.findElement(By.css(avancePercentageSelector));
-
-          const regionalName = await regionalNameElement.getText();
-          const avancePercentage = parseFloat(await avancePercentageElement.getText());
-          const modifiedName = regionalName.replace(/^: GOBIERNO REGIONAL DEL DEPARTAMENTO DE\s+/i, '');
-
-            gobiernoRegionalData.push({ name: modifiedName, avance: avancePercentage });
+            const regionalNameSelector = `#tr${i} td[align="left"]`;
+            const avancePercentageSelector = `#tr${i} td:last-child`;
+  
+            const regionalNameElement = await driver.findElement(By.css(regionalNameSelector));
+            const avancePercentageElement = await driver.findElement(By.css(avancePercentageSelector));
+  
+            const regionalName = await regionalNameElement.getText();
+            const avancePercentage = parseFloat(await avancePercentageElement.getText());
+            const modifiedName = regionalName.replace(/^: GOBIERNO REGIONAL DEL DEPARTAMENTO DE\s+/i, '');
+  
+              gobiernoRegionalData.push({ name: modifiedName, avance: avancePercentage });
         }
         gobiernoRegionalData.sort((a, b) => b.avance - a.avance);
-
         console.log(gobiernoRegionalData);
 
-        await driver.quit();
+        const mongoURI = 'mongodb+srv://publicspending:newpassword@gastopublico.sqatsh0.mongodb.net/';
+
+        const client = new MongoClient(mongoUri);
+        await client.connect();
+
+        const db = client.db('amazonas');
+        const collection = db.collection('region');
+
+        await collection.deleteMany({});
+        const result = await collection.insertMany(gobiernoRegionalData);
+
+        console.log(`Replaced ${result.insertedCount} documents in the database`);
+
+        await client.close();
 
         res.json(gobiernoRegionalData);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'An error occurred' });
-    }
-});
-
-app.listen(3000, () => {
-    console.log('Server started on port 3000');
+        console.error("Error: ", error);
+        res.status(500).json({ error: 'An error occurred', errorMessage: error.message, stack: error.stack });
+    }    
 });
