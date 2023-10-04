@@ -10,7 +10,10 @@ const port = 5000;
 app.listen(port, () => console.log(`Server is running on port ${port}`));
 
 const mongoUri = 'mongodb+srv://publicspending:newpassword@gastopublico.sqatsh0.mongodb.net/';
-const client = new MongoClient(mongoUri);
+const client = new MongoClient(mongoUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  });
 
 client.connect().then(() => {
     console.log("=== MongoDB Connected ===");
