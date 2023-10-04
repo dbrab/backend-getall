@@ -3,7 +3,6 @@ const express = require('express');
 const { Builder, By } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const cors = require('cors');
-require('chromedriver');
 
 const app = express();
 app.use(cors());
@@ -74,9 +73,10 @@ app.get('/data', async (req, res) => {
         gobiernoRegionalData.sort((a, b) => b.avance - a.avance);
         console.log(gobiernoRegionalData);
 
-        const mongoURI = 'mongodb+srv://publicspending:newpassword@gastopublico.sqatsh0.mongodb.net/';
-
-        const client = new MongoClient(mongoUri);
+        const client = new MongoClient(mongoUri, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+          });
         await client.connect();
 
         const db = client.db('amazonas');
@@ -87,11 +87,121 @@ app.get('/data', async (req, res) => {
 
         console.log(`Replaced ${result.insertedCount} documents in the database`);
 
+        if (gobiernoRegionalData!=[]) {
+            const options = new chrome.Options();
+            options.headless();
+    
+            if (!driver) {
+                driver = await new Builder()
+                    .forBrowser('chrome')
+                    .setChromeOptions(options)
+                    .build();
+            }
+    
+    
+            await driver.get('https://apps5.mineco.gob.pe/transparencia/Navegador/Navegar_7.aspx');
+    
+            const inputField = await driver.findElement(By.name('grp1'));
+            await inputField.click();
+            await driver.sleep(1000);
+        
+            const nivelGobiernoButton = await driver.findElement(By.name('ctl00$CPH1$BtnTipoGobierno'));
+            await nivelGobiernoButton.click();
+            await driver.sleep(1000);
+        
+            const nivelGobiernoRadio = await driver.findElement(By.css('input[type="radio"][name="grp1"][value^="M/"]'));
+            await nivelGobiernoRadio.click();
+            await driver.sleep(1000);
+        
+            const sectorButton = await driver.findElement(By.name('ctl00$CPH1$BtnSubTipoGobierno'));
+            await sectorButton.click();
+            await driver.sleep(1000);
+        
+            const Municipalidades = await driver.findElement(By.css('input[type="radio"][name="grp1"][value^="M/"]'));
+            await Municipalidades.click();
+            await driver.sleep(1000);
+        
+            const MuniButton = await driver.findElement(By.name('ctl00$CPH1$BtnDepartamento'));
+            await MuniButton.click();
+            await driver.sleep(1000);
+        
+            const region = await driver.findElement(By.css('input[type="radio"][name="grp1"][value^="01/"]'));
+            await region.click();
+            await driver.sleep(1000);
+        
+            const regiongo = await driver.findElement(By.name('ctl00$CPH1$BtnProvincia'));
+            await regiongo.click();
+            await driver.sleep(1000);
+        
+            const Data = [];
+        
+            const trElements = await driver.findElements(By.xpath('//tbody/tr[starts-with(@id,"tr")]'));
+        
+            for (let tr of trElements) {
+              let firstTdInput = await tr.findElement(By.xpath('./td[1]/input'));
+              let ariaLabelValue = await firstTdInput.getAttribute('aria-label');
+              let areaName = ariaLabelValue.split(',')[0];
+        
+              let lastTd = await tr.findElement(By.xpath('./td[last()]'));
+              let lastTdValue = await lastTd.getText();
+    
+              Data.push({ name: areaName, avance: lastTdValue });
+            }
+    
+            Data.sort((a, b) => b.avance - a.avance);
+
+            const client = new MongoClient(mongoUri, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+          });
+            await client.connect();
+    
+            const db = client.db('region');
+            const collection = db.collection('provincia');
+    
+            await collection.deleteMany({});
+            const result = await collection.insertMany(Data);
+    
+            console.log(`Replaced ${result.insertedCount} documents in the database`);
+            const responseData = {
+                gobiernoRegionalData: gobiernoRegionalData,
+                data: Data
+            };
+            res.json(responseData);
+        }
+
         await client.close();
 
-        res.json(gobiernoRegionalData);
     } catch (error) {
         console.error("Error: ", error);
         res.status(500).json({ error: 'An error occurred', errorMessage: error.message, stack: error.stack });
     }    
+});
+
+app.get('/getdata', async (req, res) => {
+    try {
+        const client = new MongoClient(mongoUri, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        });
+        await client.connect();
+
+        const dbRegion = client.db('amazonas');
+        const collectionRegion = dbRegion.collection('region');
+        const dataRegion = await collectionRegion.find().toArray();
+
+        const dbProvince = client.db('region');
+        const collectionProvince = dbProvince.collection('provincia');
+        const dataProvince = await collectionProvince.find().toArray();
+
+        const data = {
+            region: dataRegion,
+            province: dataProvince
+        };
+
+        res.json(data);
+    } catch (error) {
+        console.error("Error fetching data from MongoDB:", error);
+        res.status(500).json({ error: 'An error occurred', errorMessage: error.message, stack: error.stack });
+    }
 });
