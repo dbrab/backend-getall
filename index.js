@@ -10,10 +10,7 @@ const port = 5000;
 app.listen(port, () => console.log(`Server is running on port ${port}`));
 
 const mongoUri = 'mongodb+srv://publicspending:newpassword@gastopublico.sqatsh0.mongodb.net/';
-const client = new MongoClient(mongoUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  });
+const client = new MongoClient(mongoUri);
 
 client.connect().then(() => {
     console.log("=== MongoDB Connected ===");
@@ -76,10 +73,6 @@ app.get('/data', async (req, res) => {
         gobiernoRegionalData.sort((a, b) => b.avance - a.avance);
         console.log(gobiernoRegionalData);
 
-        const client = new MongoClient(mongoUri, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-          });
         await client.connect();
 
         const db = client.db('amazonas');
@@ -89,7 +82,7 @@ app.get('/data', async (req, res) => {
         const result = await collection.insertMany(gobiernoRegionalData);
 
         console.log(`Replaced ${result.insertedCount} documents in the database`);
-
+        await driver.quit(); 
         if (gobiernoRegionalData!=[]) {
             const options = new chrome.Options();
             options.headless();
@@ -100,7 +93,7 @@ app.get('/data', async (req, res) => {
                     .setChromeOptions(options)
                     .build();
             }
-    
+            
     
             await driver.get('https://apps5.mineco.gob.pe/transparencia/Navegador/Navegar_7.aspx');
     
@@ -153,10 +146,7 @@ app.get('/data', async (req, res) => {
     
             Data.sort((a, b) => b.avance - a.avance);
 
-            const client = new MongoClient(mongoUri, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-          });
+            const client = new MongoClient(mongoUri);
             await client.connect();
     
             const db = client.db('region');
@@ -183,10 +173,7 @@ app.get('/data', async (req, res) => {
 
 app.get('/getdata', async (req, res) => {
     try {
-        const client = new MongoClient(mongoUri, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
+        const client = new MongoClient(mongoUri);
         await client.connect();
 
         const dbRegion = client.db('amazonas');
