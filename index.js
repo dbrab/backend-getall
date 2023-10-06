@@ -175,6 +175,89 @@ app.get("/datap", async (req, res) => {
     }
 });
 
+app.get("/datad", async (req, res) => {
+    try {
+    const options = new chrome.Options();
+    options.headless();
+
+
+    const driver = await new Builder()
+    .forBrowser('chrome')
+    .setChromeOptions(options)
+    .build();
+    
+
+    await driver.get('https://apps5.mineco.gob.pe/transparencia/Navegador/Navegar_7.aspx');
+
+    const inputField = await driver.findElement(By.name('grp1'));
+    await inputField.click();
+    await driver.sleep(1000);
+
+    const nivelGobiernoButton = await driver.findElement(By.name('ctl00$CPH1$BtnTipoGobierno'));
+    await nivelGobiernoButton.click();
+    await driver.sleep(1000);
+
+    const nivelGobiernoRadio = await driver.findElement(By.css('input[type="radio"][name="grp1"][value^="M/"]'));
+    await nivelGobiernoRadio.click();
+    await driver.sleep(1000);
+
+    const sectorButton = await driver.findElement(By.name('ctl00$CPH1$BtnSubTipoGobierno'));
+    await sectorButton.click();
+    await driver.sleep(1000);
+
+    const Municipalidades = await driver.findElement(By.css('input[type="radio"][name="grp1"][value^="M/"]'));
+    await Municipalidades.click();
+    await driver.sleep(1000);
+
+    const MuniButton = await driver.findElement(By.name('ctl00$CPH1$BtnDepartamento'));
+    await MuniButton.click();
+    await driver.sleep(1000);
+
+    const region = await driver.findElement(By.css('input[type="radio"][name="grp1"][value^="01/"]'));
+    await region.click();
+    await driver.sleep(1000);
+
+    const regiongo = await driver.findElement(By.name('ctl00$CPH1$BtnMunicipalidad'));
+    await regiongo.click();
+    await driver.sleep(1000);
+
+    const Datadistricts = [];
+
+    const trElements = await driver.findElements(By.xpath('//tbody/tr[starts-with(@id,"tr")]'));
+
+    for (let tr of trElements) {
+      let firstTdInput = await tr.findElement(By.xpath('./td[1]/input'));
+      let ariaLabelValue = await firstTdInput.getAttribute('aria-label');
+      let areaName = ariaLabelValue.split(',')[0];
+
+      let lastTd = await tr.findElement(By.xpath('./td[last()]'));
+      let lastTdValue = await lastTd.getText();
+
+      Datadistricts.push({ name: areaName, avance: lastTdValue });
+    }
+
+    Datadistricts.sort((a, b) => b.avance - a.avance);
+    console.log(Datadistricts)
+    await driver.quit()
+
+    const client = new MongoClient(mongoUri);
+    await client.connect();
+
+    const db = client.db('regionamazonas');
+    const collection = db.collection('distritos');
+
+    await collection.deleteMany({});
+    const result = await collection.insertMany(Datadistricts);
+
+    console.log(`Replaced ${result.insertedCount} documents in the database`);
+            Datadistricts: Datadistricts
+    res.json(Datadistricts);
+} catch (error) {
+console.error("Error: ", error);
+res.status(500).json({ error: 'An error occurred', errorMessage: error.message, stack: error.stack });
+}
+});
+
 app.get('/getdata', async (req, res) => {
     try {
         const client = new MongoClient(mongoUri);
