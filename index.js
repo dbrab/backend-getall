@@ -18,8 +18,7 @@ client.connect().then(() => {
     console.error("=== MongoDB connection error ===", err);
 });
 
-
-app.get('/data', async (req, res) => {
+app.get('/datar', async (req, res) => {
     try {
         const options = new chrome.Options();
         options.headless();
@@ -72,7 +71,7 @@ app.get('/data', async (req, res) => {
         }
         gobiernoRegionalData.sort((a, b) => b.avance - a.avance);
         console.log(gobiernoRegionalData);
-
+        await driver.quit()
         await client.connect();
 
         const db = client.db('amazonas');
@@ -82,17 +81,27 @@ app.get('/data', async (req, res) => {
         const result = await collection.insertMany(gobiernoRegionalData);
 
         console.log(`Replaced ${result.insertedCount} documents in the database`);
-        await driver.quit(); 
-        if (gobiernoRegionalData!=[]) {
+        console.log(gobiernoRegionalData.length);
+        gobiernoRegionalData: gobiernoRegionalData,
+        res.json(gobiernoRegionalData)
+        await client.close();
+
+    } catch (error) {
+        console.error("Error: ", error);
+        res.status(500).json({ error: 'An error occurred', errorMessage: error.message, stack: error.stack });
+    }    
+});
+
+app.get("/datap", async (req, res) => {
+            try {
             const options = new chrome.Options();
             options.headless();
     
-            if (!driver) {
-                driver = await new Builder()
-                    .forBrowser('chrome')
-                    .setChromeOptions(options)
-                    .build();
-            }
+    
+            const driver = await new Builder()
+            .forBrowser('chrome')
+            .setChromeOptions(options)
+            .build();
             
     
             await driver.get('https://apps5.mineco.gob.pe/transparencia/Navegador/Navegar_7.aspx');
@@ -145,6 +154,8 @@ app.get('/data', async (req, res) => {
             }
     
             Data.sort((a, b) => b.avance - a.avance);
+            console.log(Data)
+            await driver.quit()
 
             const client = new MongoClient(mongoUri);
             await client.connect();
@@ -156,19 +167,12 @@ app.get('/data', async (req, res) => {
             const result = await collection.insertMany(Data);
     
             console.log(`Replaced ${result.insertedCount} documents in the database`);
-            const responseData = {
-                gobiernoRegionalData: gobiernoRegionalData,
-                data: Data
-            };
-            res.json(responseData);
-        }
-
-        await client.close();
-
-    } catch (error) {
-        console.error("Error: ", error);
-        res.status(500).json({ error: 'An error occurred', errorMessage: error.message, stack: error.stack });
-    }    
+                Data: Data
+            res.json(Data);
+        } catch (error) {
+    console.error("Error: ", error);
+    res.status(500).json({ error: 'An error occurred', errorMessage: error.message, stack: error.stack });
+    }
 });
 
 app.get('/getdata', async (req, res) => {
