@@ -258,7 +258,7 @@ res.status(500).json({ error: 'An error occurred', errorMessage: error.message, 
 }
 });
 
-app.get('/getdata', async (req, res) => {
+app.get('/getdatall', async (req, res) => {
     try {
         const client = new MongoClient(mongoUri);
         await client.connect();
@@ -271,9 +271,14 @@ app.get('/getdata', async (req, res) => {
         const collectionProvince = dbProvince.collection('provincia');
         const dataProvince = await collectionProvince.find().toArray();
 
+        const dbDistrict = client.db('regionamazonas');
+        const collectionDistrict = dbDistrict.collection('distritos');
+        const dataDistrict = await collectionDistrict.find().toArray();
+
         const data = {
             region: dataRegion,
-            province: dataProvince
+            province: dataProvince,
+            distrito: dataDistrict
         };
 
         res.json(data);
