@@ -10,7 +10,7 @@ const port = 5000;
 app.listen(port, () => console.log(`Server is running on port ${port}`));
 
 const mongoUri = 'mongodb+srv://publicspending:newpassword@gastopublico.sqatsh0.mongodb.net/';
-const client = new MongoClient(mongoUri, { unifiedtopology: true });
+const client = new MongoClient(mongoUri);
 
 client.connect().then(() => {
     console.log("=== MongoDB Connected ===");
@@ -157,7 +157,7 @@ app.get("/datap", async (req, res) => {
             console.log(Data)
             await driver.quit()
 
-                const client = new MongoClient(mongoUri, { unifiedtopology: true });
+            const client = new MongoClient(mongoUri);
             await client.connect();
     
             const db = client.db('region');
@@ -240,7 +240,7 @@ app.get("/datad", async (req, res) => {
     console.log(Datadistricts)
     await driver.quit()
 
-        const client = new MongoClient(mongoUri, { unifiedtopology: true });
+    const client = new MongoClient(mongoUri);
     await client.connect();
 
     const db = client.db('regionamazonas');
@@ -260,7 +260,7 @@ res.status(500).json({ error: 'An error occurred', errorMessage: error.message, 
 
 app.get('/getdatall', async (req, res) => {
     try {
-        const client = new MongoClient(mongoUri, { unifiedtopology: true });
+        const client = new MongoClient(mongoUri);
         await client.connect();
 
         const dbRegion = client.db('amazonas');
