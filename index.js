@@ -615,3 +615,30 @@ app.get("/datad", async (req, res) => {
         console.error("Error: ", error);
     }
 });
+
+
+app.get('/getdatall', async (req, res) => {
+    try {
+        const client = new MongoClient(mongoUri);
+        await client.connect();
+
+        const dbRegion = client.db('amazonas');
+        const collectionRegion = dbRegion.collection('region');
+        const dataRegion = await collectionRegion.find().toArray();
+        const dbProvince = client.db('region');
+        const collectionProvince = dbProvince.collection('provincia');
+        const dataProvince = await collectionProvince.find().toArray();
+        const dbDistrict = client.db('regionamazonas');
+        const collectionDistrict = dbDistrict.collection('distritos');
+        const dataDistrict = await collectionDistrict.find().toArray();
+        const data = {
+            region: dataRegion,
+            province: dataProvince,
+            distrito: dataDistrict
+        };
+        res.json(data);
+    } catch (error) {
+        console.error("Error fetching data from MongoDB:", error);
+        res.status(500).json({ error: 'An error occurred', errorMessage: error.message, stack: error.stack });
+    }
+});
